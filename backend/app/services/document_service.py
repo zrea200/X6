@@ -43,7 +43,7 @@ class DocumentService:
         """上传文档"""
         # 验证文件类型
         file_extension = Path(file.filename).suffix.lower().lstrip('.')
-        if file_extension not in settings.ALLOWED_EXTENSIONS:
+        if file_extension not in settings.allowed_extensions_list:
             raise ValueError(f"File type {file_extension} not allowed")
         
         # 生成唯一文件名

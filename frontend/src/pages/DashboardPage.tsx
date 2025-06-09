@@ -1,265 +1,159 @@
+import { chatApi } from '@/services/api'
+import { useAuthStore } from '@/stores/authStore'
+import { Chat } from '@/types'
+import {
+    Button,
+    Card,
+    CardBody,
+    CardHeader
+} from '@heroui/react'
+import {
+    MessageSquare,
+    Plus
+} from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { 
-  Card, 
-  CardBody, 
-  CardHeader,
-  Button,
-  Progress,
-  Chip
-} from '@heroui/react'
-import { 
-  FileText, 
-  MessageSquare, 
-  Upload, 
-  TrendingUp,
-  Clock,
-  CheckCircle,
-  AlertCircle
-} from 'lucide-react'
-import { documentsApi, chatApi } from '@/services/api'
-import { Document, Chat } from '@/types'
-import { useAuthStore } from '@/stores/authStore'
 
 const DashboardPage = () => {
   const { user } = useAuthStore()
-  const [documents, setDocuments] = useState<Document[]>([])
   const [chats, setChats] = useState<Chat[]>([])
   const [loading, setLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState('')
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchChats = async () => {
       try {
-        const [docsResponse, chatsResponse] = await Promise.all([
-          documentsApi.getDocuments(0, 10),
-          chatApi.getChats(0, 10)
-        ])
-        setDocuments(docsResponse.data)
-        setChats(chatsResponse.data)
+        const response = await chatApi.getChats(0, 100)
+        setChats(response.data)
       } catch (error) {
-        console.error('Failed to fetch dashboard data:', error)
+        console.error('Failed to fetch chats:', error)
       } finally {
         setLoading(false)
       }
     }
 
-    fetchData()
+    fetchChats()
   }, [])
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'completed': return 'success'
-      case 'processing': return 'warning'
-      case 'failed': return 'danger'
-      default: return 'default'
-    }
-  }
+  const filteredChats = chats.filter(chat =>
+    chat.title.toLowerCase().includes(searchQuery.toLowerCase())
+  )
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'completed': return <CheckCircle size={16} />
-      case 'processing': return <Clock size={16} />
-      case 'failed': return <AlertCircle size={16} />
-      default: return <Clock size={16} />
+  const handleDeleteChat = async (chatId: number) => {
+    try {
+      // TODO: 实现删除对话的API调用
+      setChats(prev => prev.filter(chat => chat.id !== chatId))
+    } catch (error) {
+      console.error('Failed to delete chat:', error)
     }
-  }
-
-  const stats = {
-    totalDocuments: documents.length,
-    completedDocuments: documents.filter(d => d.status === 'completed').length,
-    totalChats: chats.length,
-    processingDocuments: documents.filter(d => d.status === 'processing').length
   }
 
   return (
     <div className="space-y-6">
-      {/* 欢迎信息 */}
+      {/* 页面标题 */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-foreground">
-            欢迎回来，{user?.full_name || user?.username}！
+            对话历史
           </h1>
           <p className="text-default-500 mt-1">
-            这里是您的知识库概览
+            查看和管理您的所有对话记录
           </p>
         </div>
         <Button
           as={Link}
-          to="/documents"
+          to="/chat"
           color="primary"
-          startContent={<Upload size={16} />}
+          startContent={<Plus size={16} />}
         >
-          上传文档
+          新建对话
         </Button>
       </div>
 
-      {/* 统计卡片 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardBody className="flex flex-row items-center gap-4">
-            <div className="p-3 bg-primary/10 rounded-lg">
-              <FileText className="text-primary" size={24} />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{stats.totalDocuments}</p>
-              <p className="text-default-500">总文档数</p>
-            </div>
-          </CardBody>
-        </Card>
-
-        <Card>
-          <CardBody className="flex flex-row items-center gap-4">
-            <div className="p-3 bg-success/10 rounded-lg">
-              <CheckCircle className="text-success" size={24} />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{stats.completedDocuments}</p>
-              <p className="text-default-500">已处理文档</p>
-            </div>
-          </CardBody>
-        </Card>
-
-        <Card>
-          <CardBody className="flex flex-row items-center gap-4">
-            <div className="p-3 bg-secondary/10 rounded-lg">
-              <MessageSquare className="text-secondary" size={24} />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{stats.totalChats}</p>
-              <p className="text-default-500">对话数量</p>
-            </div>
-          </CardBody>
-        </Card>
-
-        <Card>
-          <CardBody className="flex flex-row items-center gap-4">
-            <div className="p-3 bg-warning/10 rounded-lg">
-              <TrendingUp className="text-warning" size={24} />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{stats.processingDocuments}</p>
-              <p className="text-default-500">处理中文档</p>
-            </div>
-          </CardBody>
-        </Card>
+      {/* 搜索栏 */}
+      <div className="flex gap-4">
+        <Input
+          placeholder="搜索对话..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          startContent={<Search size={16} />}
+          className="flex-1"
+        />
       </div>
 
-      {/* 最近文档和对话 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* 最近文档 */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <h3 className="text-lg font-semibold">最近文档</h3>
-            <Button
-              as={Link}
-              to="/documents"
-              variant="light"
-              size="sm"
-            >
-              查看全部
-            </Button>
-          </CardHeader>
-          <CardBody>
-            {loading ? (
-              <div className="space-y-3">
-                {[...Array(3)].map((_, i) => (
-                  <div key={i} className="animate-pulse">
-                    <div className="h-4 bg-default-200 rounded w-3/4 mb-2"></div>
-                    <div className="h-3 bg-default-100 rounded w-1/2"></div>
-                  </div>
-                ))}
-              </div>
-            ) : documents.length > 0 ? (
-              <div className="space-y-3">
-                {documents.slice(0, 5).map((doc) => (
-                  <div key={doc.id} className="flex items-center justify-between p-3 bg-content2 rounded-lg">
-                    <div className="flex-1">
-                      <p className="font-medium truncate">{doc.title}</p>
-                      <p className="text-sm text-default-500">
-                        {new Date(doc.created_at).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <Chip
-                      color={getStatusColor(doc.status)}
-                      variant="flat"
-                      size="sm"
-                      startContent={getStatusIcon(doc.status)}
+      {/* 对话列表 */}
+      <Card>
+        <CardHeader>
+          <h3 className="text-lg font-semibold">
+            对话列表 ({filteredChats.length})
+          </h3>
+        </CardHeader>
+        <CardBody>
+          {loading ? (
+            <div className="space-y-3">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="animate-pulse">
+                  <div className="h-4 bg-default-200 rounded w-3/4 mb-2"></div>
+                  <div className="h-3 bg-default-100 rounded w-1/2"></div>
+                </div>
+              ))}
+            </div>
+          ) : filteredChats.length > 0 ? (
+            <div className="space-y-3">
+              {filteredChats.map((chat) => (
+                <div key={chat.id} className="flex items-center justify-between p-4 bg-content2 rounded-lg hover:bg-content3 transition-colors">
+                  <div className="flex-1">
+                    <Link
+                      to={`/chat/${chat.id}`}
+                      className="block"
                     >
-                      {doc.status}
-                    </Chip>
+                      <p className="font-medium truncate hover:text-primary">
+                        {chat.title}
+                      </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Clock size={12} className="text-default-400" />
+                        <p className="text-sm text-default-500">
+                          {new Date(chat.created_at).toLocaleDateString('zh-CN', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </p>
+                      </div>
+                    </Link>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <FileText size={48} className="mx-auto text-default-300 mb-4" />
-                <p className="text-default-500">还没有上传任何文档</p>
-                <Button
-                  as={Link}
-                  to="/documents"
-                  color="primary"
-                  variant="light"
-                  className="mt-2"
-                >
-                  立即上传
-                </Button>
-              </div>
-            )}
-          </CardBody>
-        </Card>
-
-        {/* 最近对话 */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <h3 className="text-lg font-semibold">最近对话</h3>
-            <Button
-              as={Link}
-              to="/chat"
-              variant="light"
-              size="sm"
-            >
-              查看全部
-            </Button>
-          </CardHeader>
-          <CardBody>
-            {loading ? (
-              <div className="space-y-3">
-                {[...Array(3)].map((_, i) => (
-                  <div key={i} className="animate-pulse">
-                    <div className="h-4 bg-default-200 rounded w-3/4 mb-2"></div>
-                    <div className="h-3 bg-default-100 rounded w-1/2"></div>
-                  </div>
-                ))}
-              </div>
-            ) : chats.length > 0 ? (
-              <div className="space-y-3">
-                {chats.slice(0, 5).map((chat) => (
-                  <div key={chat.id} className="p-3 bg-content2 rounded-lg">
-                    <p className="font-medium truncate">{chat.title}</p>
-                    <p className="text-sm text-default-500">
-                      {new Date(chat.created_at).toLocaleDateString()}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <MessageSquare size={48} className="mx-auto text-default-300 mb-4" />
-                <p className="text-default-500">还没有任何对话</p>
-                <Button
-                  as={Link}
-                  to="/chat"
-                  color="primary"
-                  variant="light"
-                  className="mt-2"
-                >
-                  开始对话
-                </Button>
-              </div>
-            )}
-          </CardBody>
-        </Card>
-      </div>
+                  <Button
+                    isIconOnly
+                    variant="light"
+                    size="sm"
+                    color="danger"
+                    onPress={() => handleDeleteChat(chat.id)}
+                  >
+                    <Trash2 size={16} />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <MessageSquare size={64} className="mx-auto text-default-300 mb-4" />
+              <p className="text-default-500 mb-4">
+                {searchQuery ? '没有找到匹配的对话' : '还没有任何对话'}
+              </p>
+              <Button
+                as={Link}
+                to="/chat"
+                color="primary"
+                startContent={<Plus size={16} />}
+              >
+                开始新对话
+              </Button>
+            </div>
+          )}
+        </CardBody>
+      </Card>
     </div>
   )
 }

@@ -3,7 +3,7 @@ import { Button } from '@heroui/react'
 import {
   ChevronLeft,
   ChevronRight,
-  Home,
+  History,
   MessageSquare,
   Plus
 } from 'lucide-react'
@@ -16,8 +16,8 @@ const Sidebar = () => {
 
   const menuItems = [
     {
-      icon: Home,
-      label: '历史记录',
+      icon: History,
+      label: '对话历史',
       path: '/dashboard'
     },
     {
@@ -44,7 +44,7 @@ const Sidebar = () => {
             isIconOnly
             variant="ghost"
             size="sm"
-            onClick={() => setCollapsed(!collapsed)}
+            onPress={() => setCollapsed(!collapsed)}
           >
             {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
           </Button>
