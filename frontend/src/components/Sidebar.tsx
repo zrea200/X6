@@ -1,15 +1,14 @@
+import { cn } from '@/utils/cn'
+import { Button } from '@heroui/react'
+import {
+  ChevronLeft,
+  ChevronRight,
+  Home,
+  MessageSquare,
+  Plus
+} from 'lucide-react'
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { 
-  Home, 
-  FileText, 
-  MessageSquare, 
-  Plus,
-  ChevronLeft,
-  ChevronRight
-} from 'lucide-react'
-import { Button } from '@heroui/react'
-import { cn } from '@/utils/cn'
 
 const Sidebar = () => {
   const [collapsed, setCollapsed] = useState(false)
@@ -18,13 +17,8 @@ const Sidebar = () => {
   const menuItems = [
     {
       icon: Home,
-      label: '仪表板',
+      label: '历史记录',
       path: '/dashboard'
-    },
-    {
-      icon: FileText,
-      label: '文档管理',
-      path: '/documents'
     },
     {
       icon: MessageSquare,

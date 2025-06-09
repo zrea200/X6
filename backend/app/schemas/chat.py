@@ -15,10 +15,10 @@ class Message(MessageBase):
     """消息响应模式"""
     id: int
     chat_id: int
-    metadata: Optional[str] = None
+    msg_metadata: Optional[str] = None
     token_count: Optional[int] = None
     created_at: datetime
-    
+
     class Config:
         from_attributes = True
 

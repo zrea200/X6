@@ -5,7 +5,7 @@ from pathlib import Path
 from sqlalchemy.orm import Session
 from fastapi import UploadFile
 from app.models.document import Document
-from app.schemas.document import DocumentCreate, DocumentUpdate
+from app.schemas.document import DocumentUpdate
 from app.core.config import settings
 from app.utils.file_processor import FileProcessor
 
@@ -70,7 +70,13 @@ class DocumentService:
         self.db.add(document)
         self.db.commit()
         self.db.refresh(document)
-        
+
+        # 自动开始处理文档
+        try:
+            self.process_document(document.id)
+        except Exception as e:
+            print(f"自动处理文档失败: {e}")
+
         return document
     
     def process_document(self, document_id: int) -> bool:
@@ -106,7 +112,7 @@ class DocumentService:
         if not document:
             return None
         
-        update_data = document_update.dict(exclude_unset=True)
+        update_data = document_update.model_dump(exclude_unset=True)
         for field, value in update_data.items():
             setattr(document, field, value)
         

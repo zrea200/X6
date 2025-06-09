@@ -1,11 +1,10 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
-import { useAuthStore } from '@/stores/authStore'
 import Layout from '@/components/Layout'
-import LoginPage from '@/pages/LoginPage'
-import DashboardPage from '@/pages/DashboardPage'
-import DocumentsPage from '@/pages/DocumentsPage'
-import ChatPage from '@/pages/ChatPage'
 import ProtectedRoute from '@/components/ProtectedRoute'
+import ChatPage from '@/pages/ChatPage'
+import DashboardPage from '@/pages/DashboardPage'
+import LoginPage from '@/pages/LoginPage'
+import { useAuthStore } from '@/stores/authStore'
+import { Navigate, Route, Routes } from 'react-router-dom'
 
 function App() {
   const { isAuthenticated } = useAuthStore()
@@ -24,9 +23,8 @@ function App() {
         {/* 受保护的路由 */}
         <Route path="/" element={<ProtectedRoute />}>
           <Route element={<Layout />}>
-            <Route index element={<Navigate to="/dashboard" replace />} />
+            <Route index element={<Navigate to="/chat" replace />} />
             <Route path="dashboard" element={<DashboardPage />} />
-            <Route path="documents" element={<DocumentsPage />} />
             <Route path="chat" element={<ChatPage />} />
             <Route path="chat/:chatId" element={<ChatPage />} />
           </Route>

@@ -50,7 +50,7 @@ export interface Message {
   content: string
   role: 'user' | 'assistant' | 'system'
   chat_id: number
-  metadata?: string
+  msg_metadata?: string
   token_count?: number
   created_at: string
 }
