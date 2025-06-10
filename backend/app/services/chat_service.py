@@ -3,16 +3,16 @@ from sqlalchemy.orm import Session
 from app.models.chat import Chat, Message
 from app.schemas.chat import ChatCreate, ChatRequest, ChatResponse, DocumentSource
 from app.services.document_search_service import DocumentSearchService
+from app.core.config import settings
 import httpx
 import json
 import asyncio
-import os
 
 class AIConfig:
     """AI API配置类"""
-    API_URL = "https://api.bigmodel.org/v1/chat/completions"
-    API_KEY = os.getenv("AI_API_KEY", "sk-cmqi8iWV0aS8oNE2OR71OhiWwTUtXV9BsNevqaua2Bdd27NV")
-    MODEL = "o1-mini"
+    API_URL = "https://api.ai-gaochao.cn/v1"
+    API_KEY = settings.AI_API_KEY
+    MODEL = "gpt-3.5-turbo"
     MAX_RETRIES = 3
     TIMEOUT = 30.0
     STREAM_TIMEOUT = 60.0
