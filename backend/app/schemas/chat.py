@@ -47,7 +47,7 @@ class ChatRequest(BaseModel):
     """聊天请求模式"""
     message: str
     chat_id: Optional[int] = None
-    use_documents: bool = True
+    use_documents: bool = False  # 默认不使用文档
     document_ids: Optional[List[int]] = None  # 指定要使用的文档ID列表
 
 class DocumentSource(BaseModel):

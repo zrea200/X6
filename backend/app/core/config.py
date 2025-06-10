@@ -36,6 +36,10 @@ class Settings(BaseSettings):
     RERANK_MODEL: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
     CHUNK_SIZE: int = 512
     CHUNK_OVERLAP: int = 50
+
+    # AI API配置
+    AI_API_KEY: str = "sk-iKe0C3XVddfE5qAF1790FaC14463453e8dFb4c7c1b0bF60b"
+    AI_API_ENDPOINT: str = "https://api.ai-gaochao.cn/v1"
     
     # CORS配置
     CORS_ORIGINS: str = "http://localhost:3000,http://127.0.0.1:3000,http://localhost:3001,http://127.0.0.1:3001"

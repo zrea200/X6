@@ -2,25 +2,25 @@ import { chatApi, documentsApi } from '@/services/api'
 import { useAuthStore } from '@/stores/authStore'
 import { Chat, Document, Message } from '@/types'
 import {
-  Avatar,
-  Button,
-  Card,
-  CardBody,
-  CardHeader,
-  Input,
-  ScrollShadow,
-  Spinner
+    Avatar,
+    Button,
+    Card,
+    CardBody,
+    CardHeader,
+    Input,
+    ScrollShadow,
+    Spinner
 } from '@heroui/react'
 import {
-  Bot,
-  Check,
-  Copy,
-  FileText,
-  MessageSquare,
-  Paperclip,
-  RotateCcw,
-  Send,
-  X
+    Bot,
+    Check,
+    Copy,
+    FileText,
+    MessageSquare,
+    Paperclip,
+    RotateCcw,
+    Send,
+    X
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
@@ -117,11 +117,12 @@ const ChatPage = () => {
 
       // 使用流式API
       const documentIds = uploadedDocuments.map(doc => doc.id)
+      const useDocuments = documentIds.length > 0
       for await (const chunk of chatApi.sendMessageStream({
         message: userMessage,
         chat_id: currentChat?.id,
-        use_documents: true,
-        document_ids: documentIds.length > 0 ? documentIds : undefined
+        use_documents: useDocuments,
+        document_ids: useDocuments ? documentIds : undefined
       })) {
         if (chunk.content) {
           fullResponse += chunk.content
@@ -205,11 +206,12 @@ const ChatPage = () => {
       let fullResponse = ''
       // 使用流式API重新生成回复
       const documentIds = uploadedDocuments.map(doc => doc.id)
+      const useDocuments = documentIds.length > 0
       for await (const chunk of chatApi.sendMessageStream({
         message: userMessage.content,
         chat_id: currentChat?.id,
-        use_documents: true,
-        document_ids: documentIds.length > 0 ? documentIds : undefined
+        use_documents: useDocuments,
+        document_ids: useDocuments ? documentIds : undefined
       })) {
         if (chunk.content) {
           fullResponse += chunk.content

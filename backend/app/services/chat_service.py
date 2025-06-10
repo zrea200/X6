@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from app.models.chat import Chat, Message
 from app.schemas.chat import ChatCreate, ChatRequest, ChatResponse, DocumentSource
 from app.services.document_search_service import DocumentSearchService
+from app.core.config import settings
 import httpx
 import json
 import asyncio
@@ -10,9 +11,10 @@ import os
 
 class AIConfig:
     """AI API配置类"""
-    API_URL = "https://api.bigmodel.org/v1/chat/completions"
-    API_KEY = os.getenv("AI_API_KEY", "sk-cmqi8iWV0aS8oNE2OR71OhiWwTUtXV9BsNevqaua2Bdd27NV")
-    MODEL = "o1-mini"
+    API_BASE_URL = settings.AI_API_ENDPOINT
+    API_URL = f"{settings.AI_API_ENDPOINT}/chat/completions"
+    API_KEY = settings.AI_API_KEY
+    MODEL = "gpt-3.5-turbo"
     MAX_RETRIES = 3
     TIMEOUT = 30.0
     STREAM_TIMEOUT = 60.0
@@ -138,7 +140,7 @@ class ChatService:
         return enhanced_message
 
     async def _generate_ai_response(self, user_message: str, max_retries: int = None) -> str:
-        """生成AI回复（集成真正的AI模型，带重试机制）"""
+        """生成AI回复"""
         if max_retries is None:
             max_retries = AIConfig.MAX_RETRIES
 
@@ -153,7 +155,7 @@ class ChatService:
                     payload = {
                         'model': AIConfig.MODEL,
                         'messages': [{'role': 'user', 'content': user_message}],
-                        'stream': False  # 非流式调用，获取完整回复
+                        'stream': True # 使用流式调用
                     }
 
                     response = await client.post(
