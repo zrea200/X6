@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File,
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.api.deps import get_current_user
-from app.schemas.document import Document, DocumentUpdate, DocumentUploadResponse
+from app.schemas.document import Document, DocumentUpdate, DocumentUploadResponse, DocumentSearchRequest, DocumentSearchResult
 from app.services.document_service import DocumentService
 from app.models.user import User
 
@@ -176,3 +176,50 @@ async def reprocess_document(
     background_tasks.add_task(document_service.process_document, document.id)
     
     return {"message": "Document reprocessing started"}
+
+@router.post("/search", response_model=List[DocumentSearchResult])
+async def search_documents(
+    search_request: DocumentSearchRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """搜索文档"""
+    document_service = DocumentService(db)
+
+    try:
+        results = document_service.search_documents(search_request, current_user.id)
+        return results
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to search documents: {str(e)}"
+        )
+
+@router.post("/{document_id}/vectorize")
+async def vectorize_document(
+    document_id: int,
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """重新向量化文档"""
+    document_service = DocumentService(db)
+    document = document_service.get_document(document_id)
+
+    if not document:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document not found"
+        )
+
+    # 检查权限
+    if document.owner_id != current_user.id and not current_user.is_superuser:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not enough permissions"
+        )
+
+    # 在后台重新向量化文档
+    background_tasks.add_task(document_service.reprocess_document_vectors, document.id)
+
+    return {"message": "Document vectorization started"}

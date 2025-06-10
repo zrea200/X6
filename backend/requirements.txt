@@ -25,14 +25,16 @@ markdown==3.5.1
 beautifulsoup4==4.12.2
 
 # AI/ML
-sentence-transformers==2.2.2
-transformers==4.35.2
+sentence-transformers>=2.2.2
+transformers>=4.35.2
 torch>=2.1.1
-numpy==1.24.4
+numpy>=1.24.4
 
 # Utilities
 pydantic==2.5.0
 pydantic-settings==2.0.3
+email-validator==2.1.0
+marshmallow>=3.13.0
 python-dotenv==1.0.0
 httpx==0.25.2
 aiofiles==23.2.1

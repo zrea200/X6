@@ -78,6 +78,15 @@ export const documentsApi = {
   deleteDocument: (id: number) => api.delete(`/documents/${id}`),
 
   reprocessDocument: (id: number) => api.post(`/documents/${id}/reprocess`),
+
+  searchDocuments: (query: string, limit = 10, threshold = 0.7) =>
+    api.post('/documents/search', {
+      query,
+      limit,
+      threshold,
+    }),
+
+  vectorizeDocument: (id: number) => api.post(`/documents/${id}/vectorize`),
 }
 
 // 聊天相关API

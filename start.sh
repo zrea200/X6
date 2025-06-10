@@ -33,6 +33,14 @@ fi
 source venv/bin/activate
 pip install -r requirements.txt
 
+# 验证设置
+echo "验证Milvus向量搜索功能..."
+python verify_setup.py
+
+# 初始化向量数据库
+echo "初始化向量数据库..."
+python init_vector_db.py
+
 # 启动FastAPI服务
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 &
 BACKEND_PID=$!
@@ -49,7 +57,7 @@ FRONTEND_PID=$!
 cd ..
 
 echo "服务启动完成！"
-echo "前端地址: http://localhost:3000"
+echo "前端地址: http://localhost:5173"
 echo "后端API: http://localhost:8000"
 echo "API文档: http://localhost:8000/docs"
 echo ""

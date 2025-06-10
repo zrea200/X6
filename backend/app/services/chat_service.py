@@ -2,23 +2,29 @@ from typing import Optional, List, AsyncGenerator
 from sqlalchemy.orm import Session
 from app.models.chat import Chat, Message
 from app.schemas.chat import ChatCreate, ChatRequest, ChatResponse
+from app.schemas.document import DocumentSearchRequest
+# 避免循环导入，在方法内部导入
+from app.services.embedding_service import embedding_service
 import httpx
 import json
 import asyncio
 import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 class AIConfig:
     """AI API配置类"""
-    API_URL = "https://api.bigmodel.org/v1/chat/completions"
-    API_KEY = os.getenv("AI_API_KEY", "sk-cmqi8iWV0aS8oNE2OR71OhiWwTUtXV9BsNevqaua2Bdd27NV")
-    MODEL = "o1-mini"
+    API_URL = "https://api.ai-gaochao.cn/v1/chat/completions"
+    API_KEY = os.getenv("AI_API_KEY", "sk-iKe0C3XVddfE5qAF1790FaC14463453e8dFb4c7c1b0bF60b")
+    MODEL = "gpt-3.5-turbo"
     MAX_RETRIES = 3
     TIMEOUT = 30.0
     STREAM_TIMEOUT = 60.0
 
 class ChatService:
     """聊天服务类"""
-    
+
     def __init__(self, db: Session):
         self.db = db
     
@@ -80,8 +86,11 @@ class ChatService:
         )
         self.db.add(user_message)
         
-        # 生成AI回复（集成真正的AI模型）
-        ai_response = await self._generate_ai_response(chat_request.message)
+        # 搜索相关文档
+        relevant_docs = await self._search_relevant_documents(chat_request.message, user_id)
+
+        # 生成AI回复（集成真正的AI模型和文档上下文）
+        ai_response = await self._generate_ai_response(chat_request.message, relevant_docs)
         
         # 保存AI回复
         ai_message = Message(
@@ -99,10 +108,13 @@ class ChatService:
             sources=[]  # 后续添加文档引用
         )
     
-    async def _generate_ai_response(self, user_message: str, max_retries: int = None) -> str:
-        """生成AI回复（集成真正的AI模型，带重试机制）"""
+    async def _generate_ai_response(self, user_message: str, relevant_docs: List[str] = None, max_retries: int = None) -> str:
+        """生成AI回复（集成真正的AI模型和文档上下文，带重试机制）"""
         if max_retries is None:
             max_retries = AIConfig.MAX_RETRIES
+
+        # 构建包含文档上下文的提示
+        enhanced_message = self._build_context_message(user_message, relevant_docs)
 
         for attempt in range(max_retries):
             try:
@@ -114,7 +126,7 @@ class ChatService:
 
                     payload = {
                         'model': AIConfig.MODEL,
-                        'messages': [{'role': 'user', 'content': user_message}],
+                        'messages': [{'role': 'user', 'content': enhanced_message}],
                         'stream': False  # 非流式调用，获取完整回复
                     }
 
@@ -176,9 +188,12 @@ class ChatService:
         self.db.add(user_message)
         self.db.commit()
 
+        # 搜索相关文档
+        relevant_docs = await self._search_relevant_documents(chat_request.message, user_id)
+
         # 流式生成AI回复
         full_response = ""
-        async for chunk in self._generate_ai_response_stream(chat_request.message):
+        async for chunk in self._generate_ai_response_stream(chat_request.message, relevant_docs):
             full_response += chunk
             yield f"data: {json.dumps({'content': chunk, 'chat_id': chat_id})}\n\n"
 
@@ -194,10 +209,13 @@ class ChatService:
         # 发送结束信号
         yield f"data: {json.dumps({'done': True, 'chat_id': chat_id})}\n\n"
 
-    async def _generate_ai_response_stream(self, user_message: str, max_retries: int = None) -> AsyncGenerator[str, None]:
-        """生成流式AI回复（集成真正的AI模型，带重试机制）"""
+    async def _generate_ai_response_stream(self, user_message: str, relevant_docs: List[str] = None, max_retries: int = None) -> AsyncGenerator[str, None]:
+        """生成流式AI回复（集成真正的AI模型和文档上下文，带重试机制）"""
         if max_retries is None:
             max_retries = AIConfig.MAX_RETRIES
+
+        # 构建包含文档上下文的提示
+        enhanced_message = self._build_context_message(user_message, relevant_docs)
 
         for attempt in range(max_retries):
             try:
@@ -209,7 +227,7 @@ class ChatService:
 
                     payload = {
                         'model': AIConfig.MODEL,
-                        'messages': [{'role': 'user', 'content': user_message}],
+                        'messages': [{'role': 'user', 'content': enhanced_message}],
                         'stream': True
                     }
 
@@ -252,10 +270,56 @@ class ChatService:
 
         # 所有重试都失败，使用后备方案
         print("AI流式API所有重试都失败，使用后备方案")
-        full_response = await self._generate_ai_response(user_message, max_retries=1)
+        full_response = await self._generate_ai_response(user_message, relevant_docs, max_retries=1)
 
         # 模拟流式输出后备回复
         for i in range(0, len(full_response), 3):
             chunk = full_response[i:i+3]
             yield chunk
             await asyncio.sleep(0.1)  # 模拟网络延迟
+
+    async def _search_relevant_documents(self, query: str, user_id: int, limit: int = 5) -> List[str]:
+        """搜索相关文档"""
+        try:
+            # 动态导入避免循环依赖
+            from app.services.document_service import DocumentService
+
+            document_service = DocumentService(self.db)
+
+            search_request = DocumentSearchRequest(
+                query=query,
+                limit=limit,
+                threshold=0.6
+            )
+
+            search_results = document_service.search_documents(search_request, user_id)
+
+            # 提取文档内容
+            relevant_docs = []
+            for result in search_results:
+                relevant_docs.append(f"文档《{result.title}》: {result.content}")
+
+            logger.info(f"Found {len(relevant_docs)} relevant documents for query: {query[:50]}...")
+            return relevant_docs
+
+        except Exception as e:
+            logger.error(f"Failed to search relevant documents: {e}")
+            return []
+
+    def _build_context_message(self, user_message: str, relevant_docs: List[str] = None) -> str:
+        """构建包含文档上下文的消息"""
+        if not relevant_docs:
+            return user_message
+
+        context = "\n\n".join(relevant_docs)
+
+        enhanced_message = f"""基于以下文档内容回答用户问题：
+
+相关文档内容：
+{context}
+
+用户问题：{user_message}
+
+请基于上述文档内容回答问题。如果文档中没有相关信息，请说明并提供一般性回答。"""
+
+        return enhanced_message
