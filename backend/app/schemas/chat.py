@@ -48,9 +48,17 @@ class ChatRequest(BaseModel):
     message: str
     chat_id: Optional[int] = None
     use_documents: bool = True
+    document_ids: Optional[List[int]] = None  # 指定要使用的文档ID列表
+
+class DocumentSource(BaseModel):
+    """文档来源信息"""
+    document_id: int
+    title: str
+    filename: str
+    content_snippet: str
 
 class ChatResponse(BaseModel):
     """聊天响应模式"""
     message: str
     chat_id: int
-    sources: Optional[List[dict]] = None
+    sources: Optional[List[DocumentSource]] = None

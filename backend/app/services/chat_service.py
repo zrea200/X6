@@ -1,7 +1,8 @@
 from typing import Optional, List, AsyncGenerator
 from sqlalchemy.orm import Session
 from app.models.chat import Chat, Message
-from app.schemas.chat import ChatCreate, ChatRequest, ChatResponse
+from app.schemas.chat import ChatCreate, ChatRequest, ChatResponse, DocumentSource
+from app.services.document_search_service import DocumentSearchService
 import httpx
 import json
 import asyncio
@@ -18,9 +19,10 @@ class AIConfig:
 
 class ChatService:
     """聊天服务类"""
-    
+
     def __init__(self, db: Session):
         self.db = db
+        self.document_search_service = DocumentSearchService(db)
     
     def get_chat(self, chat_id: int) -> Optional[Chat]:
         """根据ID获取聊天会话"""
@@ -79,10 +81,31 @@ class ChatService:
             chat_id=chat_id
         )
         self.db.add(user_message)
-        
+
+        # 获取文档上下文
+        document_context = ""
+        document_sources = []
+
+        if chat_request.use_documents:
+            # 获取文档内容作为上下文
+            document_context = self.document_search_service.get_documents_content_for_context(
+                user_id=user_id,
+                document_ids=chat_request.document_ids
+            )
+
+            # 获取文档来源信息
+            document_sources = self.document_search_service.search_documents_by_user(
+                user_id=user_id,
+                query=chat_request.message,
+                document_ids=chat_request.document_ids
+            )
+
+        # 构建包含文档上下文的消息
+        enhanced_message = self._build_enhanced_message(chat_request.message, document_context)
+
         # 生成AI回复（集成真正的AI模型）
-        ai_response = await self._generate_ai_response(chat_request.message)
-        
+        ai_response = await self._generate_ai_response(enhanced_message)
+
         # 保存AI回复
         ai_message = Message(
             content=ai_response,
@@ -90,15 +113,30 @@ class ChatService:
             chat_id=chat_id
         )
         self.db.add(ai_message)
-        
+
         self.db.commit()
-        
+
         return ChatResponse(
             message=ai_response,
             chat_id=chat_id,
-            sources=[]  # 后续添加文档引用
+            sources=document_sources if document_sources else None
         )
-    
+
+    def _build_enhanced_message(self, user_message: str, document_context: str) -> str:
+        """构建包含文档上下文的增强消息"""
+        if not document_context.strip():
+            return user_message
+
+        enhanced_message = f"""基于以下文档内容回答用户问题：
+
+{document_context}
+
+用户问题：{user_message}
+
+请基于上述文档内容回答问题。如果文档中没有相关信息，请说明并提供一般性回答。"""
+
+        return enhanced_message
+
     async def _generate_ai_response(self, user_message: str, max_retries: int = None) -> str:
         """生成AI回复（集成真正的AI模型，带重试机制）"""
         if max_retries is None:
@@ -176,9 +214,20 @@ class ChatService:
         self.db.add(user_message)
         self.db.commit()
 
+        # 获取文档上下文
+        document_context = ""
+        if chat_request.use_documents:
+            document_context = self.document_search_service.get_documents_content_for_context(
+                user_id=user_id,
+                document_ids=chat_request.document_ids
+            )
+
+        # 构建包含文档上下文的消息
+        enhanced_message = self._build_enhanced_message(chat_request.message, document_context)
+
         # 流式生成AI回复
         full_response = ""
-        async for chunk in self._generate_ai_response_stream(chat_request.message):
+        async for chunk in self._generate_ai_response_stream(enhanced_message):
             full_response += chunk
             yield f"data: {json.dumps({'content': chunk, 'chat_id': chat_id})}\n\n"
 

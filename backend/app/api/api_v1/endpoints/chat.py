@@ -6,6 +6,7 @@ from app.core.database import get_db
 from app.api.deps import get_current_user
 from app.schemas.chat import Chat, ChatCreate, ChatRequest, ChatResponse
 from app.services.chat_service import ChatService
+from app.services.document_search_service import DocumentSearchService
 from app.models.user import User
 
 router = APIRouter()
@@ -133,3 +134,13 @@ async def delete_chat(
         )
     
     return {"message": "Chat deleted successfully"}
+
+@router.get("/documents")
+async def get_chat_documents(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """获取用户可用于聊天的文档列表"""
+    document_search_service = DocumentSearchService(db)
+    documents = document_search_service.get_user_documents_summary(current_user.id)
+    return {"documents": documents}

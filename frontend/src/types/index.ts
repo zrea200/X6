@@ -59,17 +59,20 @@ export interface ChatRequest {
   message: string
   chat_id?: number
   use_documents?: boolean
+  document_ids?: number[]
+}
+
+export interface DocumentSource {
+  document_id: number
+  title: string
+  filename: string
+  content_snippet: string
 }
 
 export interface ChatResponse {
   message: string
   chat_id: number
-  sources?: Array<{
-    document_id: number
-    title: string
-    content: string
-    score: number
-  }>
+  sources?: DocumentSource[]
 }
 
 export interface DocumentUploadResponse {

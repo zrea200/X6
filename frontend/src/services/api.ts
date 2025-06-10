@@ -94,12 +94,14 @@ export const chatApi = {
     message: string
     chat_id?: number
     use_documents?: boolean
+    document_ids?: number[]
   }) => api.post('/chat/message', data),
 
   sendMessageStream: async function* (data: {
     message: string
     chat_id?: number
     use_documents?: boolean
+    document_ids?: number[]
   }) {
     const token = useAuthStore.getState().token
     const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'}/chat/message/stream`, {
@@ -143,6 +145,8 @@ export const chatApi = {
   },
 
   deleteChat: (id: number) => api.delete(`/chat/${id}`),
+
+  getChatDocuments: () => api.get('/chat/documents'),
 }
 
 export default api

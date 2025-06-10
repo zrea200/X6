@@ -116,10 +116,12 @@ const ChatPage = () => {
       let chatId = currentChat?.id
 
       // 使用流式API
+      const documentIds = uploadedDocuments.map(doc => doc.id)
       for await (const chunk of chatApi.sendMessageStream({
         message: userMessage,
         chat_id: currentChat?.id,
-        use_documents: true
+        use_documents: true,
+        document_ids: documentIds.length > 0 ? documentIds : undefined
       })) {
         if (chunk.content) {
           fullResponse += chunk.content
@@ -202,10 +204,12 @@ const ChatPage = () => {
       setSending(true)
       let fullResponse = ''
       // 使用流式API重新生成回复
+      const documentIds = uploadedDocuments.map(doc => doc.id)
       for await (const chunk of chatApi.sendMessageStream({
         message: userMessage.content,
         chat_id: currentChat?.id,
-        use_documents: true
+        use_documents: true,
+        document_ids: documentIds.length > 0 ? documentIds : undefined
       })) {
         if (chunk.content) {
           fullResponse += chunk.content
@@ -259,7 +263,18 @@ const ChatPage = () => {
       const response = await documentsApi.uploadDocument(file, file.name)
 
       // 添加到已上传文档列表
-      setUploadedDocuments(prev => [...prev, response.data])
+      const uploadedDoc: Document = {
+        id: response.data.document_id,
+        title: file.name,
+        filename: response.data.filename,
+        file_path: '',
+        status: response.data.status as 'pending' | 'processing' | 'completed' | 'failed',
+        is_vectorized: false,
+        vector_count: 0,
+        owner_id: 0,
+        created_at: new Date().toISOString()
+      }
+      setUploadedDocuments(prev => [...prev, uploadedDoc])
 
       // 添加文档上传消息到聊天
       const documentMessage: Message = {
@@ -365,13 +380,13 @@ const ChatPage = () => {
                       }`}>
                         {message.content}
                       </p>
-                      <p className={`text-xs mt-2 ${
+                      {/* <p className={`text-xs mt-2 ${
                         message.role === 'user'
                           ? 'text-primary-foreground/70'
                           : 'text-default-500'
                       }`}>
                         {formatTime(message.created_at)}
-                      </p>
+                      </p> */}
 
                       {/* 消息操作按钮 */}
                       {message.content && message.role !== 'system' && (

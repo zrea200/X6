@@ -41,6 +41,7 @@ class Document(Base):
     
     # 关系
     owner = relationship("User", back_populates="documents")
+    chats = relationship("Chat", secondary="chat_documents", back_populates="documents")
     
     def __repr__(self):
         return f"<Document(id={self.id}, title='{self.title}', status='{self.status}')>"

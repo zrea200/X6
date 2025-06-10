@@ -1,7 +1,15 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Boolean
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Boolean, Table
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.core.database import Base
+
+# 聊天会话与文档的关联表
+chat_documents = Table(
+    'chat_documents',
+    Base.metadata,
+    Column('chat_id', Integer, ForeignKey('chats.id'), primary_key=True),
+    Column('document_id', Integer, ForeignKey('documents.id'), primary_key=True)
+)
 
 class Chat(Base):
     """聊天会话模型"""
@@ -24,6 +32,7 @@ class Chat(Base):
     # 关系
     user = relationship("User", back_populates="chats")
     messages = relationship("Message", back_populates="chat", cascade="all, delete-orphan")
+    documents = relationship("Document", secondary=chat_documents, back_populates="chats")
     
     def __repr__(self):
         return f"<Chat(id={self.id}, title='{self.title}')>"
